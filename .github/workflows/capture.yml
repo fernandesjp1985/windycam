@@ -18,18 +18,20 @@ jobs:
       - name: Obter Temperatura da Estacao
         run: |
           API_URL="https://api.weather.com/v2/pws/observations/current?stationId=${{ secrets.WU_STATION_ID }}&format=json&units=m&apiKey=${{ secrets.WU_API_KEY }}"
-          TEMP=$(curl -s "$API_URL" | jq -r '.observations[0].metric.temp')
+          RAW_TEMP=$(curl -s "$API_URL" | jq -r '.observations[0].metric.temp')
           
-          if [ -z "$TEMP" ] || [ "$TEMP" = "null" ]; then
+          if [ -z "$RAW_TEMP" ] || [ "$RAW_TEMP" = "null" ]; then
             echo "CURRENT_TEMP=--.-" >> $GITHUB_ENV
           else
-            echo "CURRENT_TEMP=${TEMP}" >> $GITHUB_ENV
+            # Formata para exatamente 1 casa decimal (ex: 18 -> 18.0 ou 18.42 -> 18.4)
+            FORMATTED_TEMP=$(printf "%.1f" "$RAW_TEMP" 2>/dev/null || echo "$RAW_TEMP")
+            echo "CURRENT_TEMP=${FORMATTED_TEMP}" >> $GITHUB_ENV
           fi
 
       - name: Capturar Frame e Estampar Temperatura
         run: |
           ffmpeg -y -rtsp_transport tcp -i "${{ secrets.RTSP_URL }}" \
-            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${CURRENT_TEMP}°C':x=w-tw-20:y=h-th-20:fontsize=32:fontcolor=white:box=1:boxcolor=black@0.6:boxborderw=8" \
+            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${CURRENT_TEMP}°C':x=w-tw-30:y=h-th-30:fontsize=64:fontcolor=white:box=1:boxcolor=black@0.6:boxborderw=12" \
             -frames:v 1 -q:v 2 snapshot.jpg
 
       - name: Atualizar imagem no repositorio
