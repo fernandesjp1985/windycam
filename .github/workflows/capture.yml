@@ -1,0 +1,30 @@
+YAML
+name: Atualizar Snapshot da Webcam
+
+on:
+  schedule:
+    # Executa a cada hora ao minuto 0
+    - cron: '0 * * * *'
+  workflow_dispatch: # Permite disparar o teste manual com um botão
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Capturar Frame da Câmara
+        run: |
+          ffmpeg -y -rtsp_transport tcp -i "${{ secrets.RTSP_URL }}" -frames:v 1 -q:v 2 snapshot.jpg
+
+      - name: Atualizar imagem no repositório
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add snapshot.jpg
+          git commit -m "Auto snapshot [skip ci]" || exit 0
+          git push
