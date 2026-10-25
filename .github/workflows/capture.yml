@@ -2,7 +2,7 @@ name: Atualizar Snapshot da Webcam
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '*/10 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -12,12 +12,25 @@ jobs:
       - name: Checkout do repositorio
         uses: actions/checkout@v4
 
-      - name: Instalar FFmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Instalar FFmpeg, jq e Fontes
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg jq curl fonts-dejavu-core
 
-      - name: Capturar Frame da Camara
+      - name: Obter Temperatura da Estacao
         run: |
-          ffmpeg -y -rtsp_transport tcp -i "${{ secrets.RTSP_URL }}" -frames:v 1 -q:v 2 snapshot.jpg
+          API_URL="https://api.weather.com/v2/pws/observations/current?stationId=${{ secrets.WU_STATION_ID }}&format=json&units=m&apiKey=${{ secrets.WU_API_KEY }}"
+          TEMP=$(curl -s "$API_URL" | jq -r '.observations[0].metric.temp')
+          
+          if [ -z "$TEMP" ] || [ "$TEMP" = "null" ]; then
+            echo "CURRENT_TEMP=--.-" >> $GITHUB_ENV
+          else
+            echo "CURRENT_TEMP=${TEMP}" >> $GITHUB_ENV
+          fi
+
+      - name: Capturar Frame e Estampar Temperatura
+        run: |
+          ffmpeg -y -rtsp_transport tcp -i "${{ secrets.RTSP_URL }}" \
+            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${CURRENT_TEMP}°C':x=w-tw-20:y=h-th-20:fontsize=32:fontcolor=white:box=1:boxcolor=black@0.6:boxborderw=8" \
+            -frames:v 1 -q:v 2 snapshot.jpg
 
       - name: Atualizar imagem no repositorio
         run: |
