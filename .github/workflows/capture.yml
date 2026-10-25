@@ -30,7 +30,7 @@ jobs:
       - name: Capturar Frame e Estampar Temperatura
         run: |
           ffmpeg -y -rtsp_transport tcp -i "${{ secrets.RTSP_URL }}" \
-            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='|  ${CURRENT_TEMP}°C':x=560:y=28:fontsize=36:fontcolor=white:borderw=2:bordercolor=black:box=0" \
+            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='|  ${CURRENT_TEMP}°C':x=630:y=35:fontsize=36:fontcolor=white:borderw=2:bordercolor=black:box=0" \
             -frames:v 1 -q:v 2 snapshot.jpg
 
       - name: Forçar Atualização no Repositório
