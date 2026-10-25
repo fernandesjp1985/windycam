@@ -13,20 +13,20 @@ jobs:
       - name: Checkout do repositorio
         uses: actions/checkout@v4
 
-      - name: Instalar FFmpeg, jq e Fontes
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg jq curl fonts-dejavu-core bc
+      - name: Instalar Dependencias
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg jq curl fonts-dejavu-core python3
 
       - name: Obter Temperatura da Estacao
         run: |
           API_URL="https://api.weather.com/v2/pws/observations/current?stationId=${{ secrets.WU_STATION_ID }}&format=json&units=e&apiKey=${{ secrets.WU_API_KEY }}"
-          RAW_F=$(curl -s --max-time 10 "$API_URL" | jq -r '.observations[0].imperial.temp')
+          
+          RAW_F=$(curl -s --max-time 15 "$API_URL" | jq -r '.observations[0].imperial.temp // empty')
           
           if [ -z "$RAW_F" ] || [ "$RAW_F" = "null" ]; then
             echo "CURRENT_TEMP=--.-" >> $GITHUB_ENV
           else
-            TEMP_C=$(echo "scale=1; ($RAW_F - 32) * 5 / 9" | bc -l)
-            FORMATTED_TEMP=$(printf "%.1f" "$TEMP_C" 2>/dev/null || echo "$TEMP_C")
-            echo "CURRENT_TEMP=${FORMATTED_TEMP}" >> $GITHUB_ENV
+            TEMP_C=$(python3 -c "f = float('$RAW_F'); print(f'{(f - 32.0) * 5.0 / 9.0:.1f}')" 2>/dev/null || echo "--.-")
+            echo "CURRENT_TEMP=${TEMP_C}" >> $GITHUB_ENV
           fi
 
       - name: Capturar Frame e Estampar Temperatura
