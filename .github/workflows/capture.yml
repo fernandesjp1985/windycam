@@ -2,6 +2,7 @@ name: Atualizar Snapshot da Webcam
 
 on:
   schedule:
+    # Agendado para correr a cada 10 minutos
     - cron: '*/10 * * * *'
   workflow_dispatch:
 
@@ -23,7 +24,6 @@ jobs:
           if [ -z "$RAW_TEMP" ] || [ "$RAW_TEMP" = "null" ]; then
             echo "CURRENT_TEMP=--.-" >> $GITHUB_ENV
           else
-            # Formata para exatamente 1 casa decimal (ex: 18 -> 18.0 ou 18.42 -> 18.4)
             FORMATTED_TEMP=$(printf "%.1f" "$RAW_TEMP" 2>/dev/null || echo "$RAW_TEMP")
             echo "CURRENT_TEMP=${FORMATTED_TEMP}" >> $GITHUB_ENV
           fi
@@ -34,10 +34,12 @@ jobs:
             -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${CURRENT_TEMP}°C':x=w-tw-30:y=h-th-30:fontsize=64:fontcolor=white:box=1:boxcolor=black@0.6:boxborderw=12" \
             -frames:v 1 -q:v 2 snapshot.jpg
 
-      - name: Atualizar imagem no repositorio
+      - name: Forçar Atualização no Repositório
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add snapshot.jpg
-          git commit -m "Auto snapshot [skip ci]" || exit 0
+          # Regista a data atual num ficheiro de controlo para forçar sempre um commit novo
+          date -u > .last_update
+          git add snapshot.jpg .last_update
+          git commit -m "Auto snapshot: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" || exit 0
           git push
