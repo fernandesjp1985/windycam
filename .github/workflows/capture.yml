@@ -2,7 +2,6 @@ name: Atualizar Snapshot da Webcam
 
 on:
   schedule:
-    # Agendado para correr a cada 10 minutos
     - cron: '*/10 * * * *'
   workflow_dispatch:
 
@@ -31,14 +30,13 @@ jobs:
       - name: Capturar Frame e Estampar Temperatura
         run: |
           ffmpeg -y -rtsp_transport tcp -i "${{ secrets.RTSP_URL }}" \
-            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${CURRENT_TEMP}°C':x=w-tw-30:y=h-th-30:fontsize=64:fontcolor=white:box=1:boxcolor=black@0.6:boxborderw=12" \
+            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${CURRENT_TEMP}°C':x=30:y=85:fontsize=42:fontcolor=white:borderw=2:bordercolor=black:box=0" \
             -frames:v 1 -q:v 2 snapshot.jpg
 
       - name: Forçar Atualização no Repositório
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          # Regista a data atual num ficheiro de controlo para forçar sempre um commit novo
           date -u > .last_update
           git add snapshot.jpg .last_update
           git commit -m "Auto snapshot: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" || exit 0
