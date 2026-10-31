@@ -5,6 +5,11 @@ on:
     - cron: '*/10 * * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
   snapshot:
     runs-on: ubuntu-latest
@@ -29,11 +34,15 @@ jobs:
             echo "CURRENT_TEMP=${TEMP_C}" >> $GITHUB_ENV
           fi
 
-      - name: Capturar Frame e Estampar Temperatura
+      - name: Capturar Frame com Barra Preta e Dados Centrados
         run: |
+          export TZ="Europe/Lisbon"
+          HORA=$(date +'%d-%m-%Y %H\:%M\:%S')
+          BANNER="S. M. V. BOA | $HORA | ${CURRENT_TEMP} °C"
+
           timeout 20s ffmpeg -y -rtsp_transport tcp -timeout 5000000 -i "${{ secrets.RTSP_URL }}" \
             -analyzeduration 1000000 -probesize 1000000 \
-            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='|  ${CURRENT_TEMP}°C':x=670:y=42:fontsize=36:fontcolor=white:borderw=2:bordercolor=black:box=0" \
+            -vf "drawbox=x=0:y=0:w=iw:h=110:color=black:t=fill,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='$BANNER':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=(110-text_h)/2" \
             -frames:v 1 -q:v 2 snapshot.jpg
 
       - name: Forçar Atualização no Repositório
@@ -42,5 +51,4 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           date -u > .last_update
           git add snapshot.jpg .last_update
-          git commit -m "Auto snapshot: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" || exit 0
-          git push
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto snapshot: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" && git push)
